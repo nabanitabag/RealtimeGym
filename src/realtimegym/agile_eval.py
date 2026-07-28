@@ -157,13 +157,16 @@ def game_loop(file: str, raw_seed: int, args: argparse.Namespace) -> dict[str, A
     obs, done = env.reset()
     if render is not None:
         surfaces.append(render.render(env))
-    while not done:
+    steps = 0
+    max_steps = getattr(args, "max_steps", None)
+    while not done and (max_steps is None or steps < max_steps):
         agent.observe(obs)
         agent.think(timeout=args.time_pressure)
         action = agent.act()
         obs, done, reward, reset_flag = env.step(action)
         env.summary()
         agent.log(reward, reset_flag)
+        steps += 1
         if render is not None:
             surfaces.append(render.render(env))
     if render is not None:
@@ -212,6 +215,8 @@ def main() -> None:
     args.add_argument("--cognitive_load", type=str, choices=["E", "M", "H"])
     args.add_argument("--mode", type=str, choices=["agile", "reactive", "planning"])
     args.add_argument("--internal_budget", type=int, default=8192)
+    args.add_argument("--max_steps", type=int, default=None,
+                      help="cap env steps per episode (default: run to natural termination)")
     # Gap 3 — planning-thread refresh (agile mode). Off by default = vanilla.
     args.add_argument("--refresh_plan", action="store_true", default=False)
     args.add_argument("--refresh_every", type=int, default=0)
